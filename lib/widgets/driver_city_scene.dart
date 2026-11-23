@@ -35,81 +35,55 @@ class DriverCityScene extends StatefulWidget {
 }
 
 class _DriverCitySceneState extends State<DriverCityScene>
-    with TickerProviderStateMixin {
-  late final AnimationController _farController;
-  late final AnimationController _midController;
-  late final AnimationController _dashController;
-  late final AnimationController _wheelController;
-  late final AnimationController _vanDriveController;
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-
-    _farController = AnimationController(
+    _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 40),
-    )..repeat();
-
-    _midController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 24),
-    )..repeat();
-
-    _dashController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat();
-
-    _wheelController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 700),
-    )..repeat();
-
-    _vanDriveController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 9000),
+      duration: const Duration(seconds: 360),
     )..repeat();
   }
 
   @override
   void dispose() {
-    _farController.dispose();
-    _midController.dispose();
-    _dashController.dispose();
-    _wheelController.dispose();
-    _vanDriveController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: widget.height,
-      width: double.infinity,
-      child: ClipRect(
-        child: AnimatedBuilder(
-          animation: Listenable.merge([
-            _farController,
-            _midController,
-            _dashController,
-            _wheelController,
-            _vanDriveController,
-          ]),
-          builder: (context, _) {
-            return CustomPaint(
-              size: Size(double.infinity, widget.height),
-              painter: _DriverCityPainter(
-                farT: _farController.value,
-                midT: _midController.value,
-                dashT: _dashController.value,
-                wheelAngle: _wheelController.value * 2.0 * math.pi,
-                vanProgress: _vanDriveController.value,
-                isSpeeding: widget.animateDriveOut,
-                transparentBg: widget.transparentBg,
-              ),
-            );
-          },
+    return RepaintBoundary(
+      child: SizedBox(
+        height: widget.height,
+        width: double.infinity,
+        child: ClipRect(
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) {
+              final double tMs = _controller.value * 360000.0;
+              final double farT = (tMs % 40000.0) / 40000.0;
+              final double midT = (tMs % 24000.0) / 24000.0;
+              final double dashT = (tMs % 900.0) / 900.0;
+              final double wheelAngle = ((tMs % 700.0) / 700.0) * 2.0 * math.pi;
+              final double vanProgress = (tMs % 9000.0) / 9000.0;
+
+              return CustomPaint(
+                size: Size(double.infinity, widget.height),
+                painter: _DriverCityPainter(
+                  farT: farT,
+                  midT: midT,
+                  dashT: dashT,
+                  wheelAngle: wheelAngle,
+                  vanProgress: vanProgress,
+                  isSpeeding: widget.animateDriveOut,
+                  transparentBg: widget.transparentBg,
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -124,6 +98,76 @@ class _DriverCityPainter extends CustomPainter {
   final double vanProgress;
   final bool isSpeeding;
   final bool transparentBg;
+
+  // Cached TextPainters to eliminate per-frame layout overhead & memory thrashing
+  static TextPainter? _cachedVanBrand;
+  static TextPainter get _vanBrandTp {
+    return _cachedVanBrand ??= TextPainter(
+      text: TextSpan(
+        style: GoogleFonts.satisfy(
+          fontSize: 16.0,
+          fontWeight: FontWeight.w700,
+          fontStyle: FontStyle.italic,
+        ),
+        children: const [
+          TextSpan(text: 'Dryclean', style: TextStyle(color: Color(0xFF0B2545))),
+          TextSpan(text: 'Plus', style: TextStyle(color: Color(0xFFE5262D))),
+          TextSpan(text: '+', style: TextStyle(color: Color(0xFFE5262D), fontSize: 13)),
+        ],
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+  }
+
+  static TextPainter? _cachedSub;
+  static TextPainter get _subTp {
+    return _cachedSub ??= TextPainter(
+      text: const TextSpan(
+        text: 'Premium care · Delivered to you',
+        style: TextStyle(
+          fontSize: 5.2,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.05,
+          color: Color(0xFF1550E8),
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: 80);
+  }
+
+  static TextPainter? _cachedBadge;
+  static TextPainter get _badgeTp {
+    return _cachedBadge ??= TextPainter(
+      text: TextSpan(
+        style: GoogleFonts.inter(
+          fontSize: 7.7,
+          fontWeight: FontWeight.w900,
+          letterSpacing: -0.3,
+        ),
+        children: const [
+          TextSpan(text: 'DC', style: TextStyle(color: Colors.white)),
+          TextSpan(text: '+', style: TextStyle(color: Color(0xFFE5262D))),
+        ],
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+  }
+
+  static TextPainter? _cachedFlag;
+  static TextPainter get _flagTp {
+    return _cachedFlag ??= TextPainter(
+      text: const TextSpan(
+        text: 'DC+',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 8.5,
+          fontWeight: FontWeight.w900,
+          letterSpacing: -0.2,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+  }
 
   _DriverCityPainter({
     required this.farT,
@@ -379,38 +423,9 @@ class _DriverCityPainter extends CustomPainter {
     // Organic DC+ Pick Badge on Van Side
     _drawVanPickBadge(canvas, const Offset(14, 18), 22);
 
-    // Cursive "DrycleanPlus+" Brand
-    final vanBrandTp = TextPainter(
-      text: TextSpan(
-        style: GoogleFonts.satisfy(
-          fontSize: 16.0,
-          fontWeight: FontWeight.w700,
-          fontStyle: FontStyle.italic,
-        ),
-        children: const [
-          TextSpan(text: 'Dryclean', style: TextStyle(color: Color(0xFF0B2545))),
-          TextSpan(text: 'Plus', style: TextStyle(color: Color(0xFFE5262D))),
-          TextSpan(text: '+', style: TextStyle(color: Color(0xFFE5262D), fontSize: 13)),
-        ],
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    vanBrandTp.paint(canvas, const Offset(38, 16));
-
-    // Tagline: "Premium care · Delivered to you"
-    final subTp = TextPainter(
-      text: const TextSpan(
-        text: 'Premium care · Delivered to you',
-        style: TextStyle(
-          fontSize: 5.2,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.05,
-          color: Color(0xFF1550E8),
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: 80);
-    subTp.paint(canvas, const Offset(38, 34));
+    // Cursive "DrycleanPlus+" Brand & Tagline (using cached painters)
+    _vanBrandTp.paint(canvas, const Offset(38, 16));
+    _subTp.paint(canvas, const Offset(38, 34));
 
     // Illuminated Forward Headlight Beam Cone
     final beamPath = Path()
@@ -482,24 +497,9 @@ class _DriverCityPainter extends CustomPainter {
         ..strokeWidth = 0.8,
     );
 
-    final badgeTp = TextPainter(
-      text: TextSpan(
-        style: GoogleFonts.inter(
-          fontSize: size * 0.35,
-          fontWeight: FontWeight.w900,
-          letterSpacing: -0.3,
-        ),
-        children: const [
-          TextSpan(text: 'DC', style: TextStyle(color: Colors.white)),
-          TextSpan(text: '+', style: TextStyle(color: Color(0xFFE5262D))),
-        ],
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-
-    badgeTp.paint(
+    _badgeTp.paint(
       canvas,
-      Offset((w - badgeTp.width) / 2.0, (h - badgeTp.height) / 2.0),
+      Offset((w - _badgeTp.width) / 2.0, (h - _badgeTp.height) / 2.0),
     );
 
     canvas.restore();
@@ -578,19 +578,7 @@ class _DriverCityPainter extends CustomPainter {
 
     canvas.save();
     canvas.translate(flagCenter.dx, flagCenter.dy);
-    final flagTp = TextPainter(
-      text: const TextSpan(
-        text: 'DC+',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 8.5,
-          fontWeight: FontWeight.w900,
-          letterSpacing: -0.2,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    flagTp.paint(canvas, Offset(-flagTp.width / 2.0, -flagTp.height / 2.0));
+    _flagTp.paint(canvas, Offset(-_flagTp.width / 2.0, -_flagTp.height / 2.0));
     canvas.restore();
 
     canvas.restore();

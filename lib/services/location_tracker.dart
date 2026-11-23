@@ -118,18 +118,6 @@ class LocationTracker {
     } catch (e) {
       debugPrint('Geolocator getPositionStream failed: $e');
     }
-
-    // 3. For Web: Add a resilient fallback timer every 4 seconds to guarantee updates
-    if (kIsWeb) {
-      _webFallbackTimer = Timer.periodic(const Duration(seconds: 4), (_) async {
-        try {
-          final p = await Geolocator.getCurrentPosition(
-            locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-          ).timeout(const Duration(seconds: 5));
-          onPosition(p);
-        } catch (_) {}
-      });
-    }
   }
 
   Future<void> stop() async {

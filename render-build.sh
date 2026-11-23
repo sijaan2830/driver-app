@@ -19,6 +19,6 @@ echo "=== Installing Dependencies ==="
 flutter pub get
 
 echo "=== Building Flutter Web (Release) ==="
-flutter build web --release
+flutter build web --wasm --release
 
 echo "=== Build Successful! Output ready in build/web ==="

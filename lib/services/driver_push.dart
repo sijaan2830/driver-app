@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 // FCM registration tokens (getToken/onTokenRefresh) are what the server's
 // messaging.send({token}) targets — same as the customer app — so we keep them
 // rather than the newer installation-ID API.
@@ -15,6 +16,11 @@ class DriverPush {
 
   /// Call after the driver signs in. [onMessage] shows foreground messages in the app.
   static Future<void> register(String uid, void Function(String title, String body) onMessage) async {
+    if (kIsWeb) {
+      // On web, real-time Firestore listeners (watchJobs) already stream all jobs instantaneously.
+      // FCM web push requires a service worker and VAPID key which crash on unsupported mobile browsers.
+      return;
+    }
     final fcm = FirebaseMessaging.instance;
     try {
       await fcm.requestPermission(alert: true, badge: true, sound: true);
@@ -38,6 +44,7 @@ class DriverPush {
 
   /// Stop pushes to this phone when the driver signs out.
   static Future<void> unregister(String uid) async {
+    if (kIsWeb) return;
     await _refresh?.cancel();
     await _foreground?.cancel();
     try {
