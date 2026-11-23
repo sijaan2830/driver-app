@@ -85,7 +85,43 @@ class TripScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text('“${job.notes}”', style: DC.t(13.5, color: const Color(0xFF78350F), w: FontWeight.w600)),
               ],
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
+              if (arrived)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFF59E0B), width: 1.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD97706),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.front_hand_rounded, color: Colors.white, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('ARRIVED · STOP & PARK HERE', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF92400E), fontSize: 13)),
+                            const SizedBox(height: 2),
+                            Text(
+                              job.fullAddress,
+                              style: const TextStyle(color: Color(0xFF78350F), fontSize: 12, fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               Row(children: [
                 Expanded(child: Btn('Navigate', icon: Icons.navigation_rounded, kind: BtnKind.dark, height: 52, onTap: () => navigateTo(job))),
                 const SizedBox(width: 10),

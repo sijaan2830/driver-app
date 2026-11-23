@@ -76,17 +76,20 @@ class _RouteMapState extends State<RouteMap> {
         ),
         if (widget.line && widget.me != null && focus != null && focus.hasGeo)
           PolylineLayer(polylines: [
-            Polyline(points: [widget.me!, LatLng(focus.lat!, focus.lng!)], strokeWidth: 5, color: DC.forest.withValues(alpha: .75)),
+            // High-contrast outer casing line
+            Polyline(points: [widget.me!, LatLng(focus.lat!, focus.lng!)], strokeWidth: 9, color: const Color(0xFF1E3A8A)),
+            // Bold royal blue navigation route line
+            Polyline(points: [widget.me!, LatLng(focus.lat!, focus.lng!)], strokeWidth: 6, color: const Color(0xFF2563EB)),
           ]),
         MarkerLayer(markers: [
           for (final s in widget.stops)
             if (s.hasGeo)
               Marker(
                 point: LatLng(s.lat!, s.lng!),
-                width: 46,
-                height: 54,
+                width: (focus != null && focus.id == s.id) ? 140 : 46,
+                height: (focus != null && focus.id == s.id) ? 75 : 54,
                 alignment: Alignment.topCenter,
-                child: _StopPin(job: s, highlighted: focus == null || focus.id == s.id),
+                child: _StopPin(job: s, highlighted: focus == null || focus.id == s.id, isDestination: focus?.id == s.id),
               ),
           if (widget.me != null) Marker(point: widget.me!, width: 52, height: 52, child: _Van(heading: widget.heading)),
         ]),
@@ -115,13 +118,61 @@ class _Van extends StatelessWidget {
 }
 
 class _StopPin extends StatelessWidget {
-  const _StopPin({required this.job, required this.highlighted});
+  const _StopPin({required this.job, required this.highlighted, this.isDestination = false});
   final Job job;
   final bool highlighted;
+  final bool isDestination;
+
   @override
   Widget build(BuildContext context) {
     final done = job.isDone;
-    final color = done ? DC.mut : (job.isPickup ? DC.amber : DC.emerald);
+    final color = done ? DC.mut : (isDestination ? const Color(0xFF2563EB) : (job.isPickup ? DC.amber : DC.emerald));
+
+    if (isDestination && !done) {
+      final arrived = job.status == JobStatus.arrived;
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: arrived ? const Color(0xFFB45309) : const Color(0xFF1E3A8A),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 3)),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(arrived ? Icons.front_hand_rounded : Icons.where_to_vote_rounded, color: Colors.yellowAccent, size: 14),
+                const SizedBox(width: 4),
+                Text(
+                  arrived ? 'STOP HERE' : 'DESTINATION',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 2),
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: arrived ? const Color(0xFFD97706) : const Color(0xFF2563EB),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
+              boxShadow: DC.shadow(.3),
+            ),
+            alignment: Alignment.center,
+            child: Text('${job.sequence}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
+          ),
+          Container(width: 3, height: 8, color: arrived ? const Color(0xFFB45309) : const Color(0xFF1E3A8A)),
+        ],
+      );
+    }
+
     return Opacity(
       opacity: highlighted ? 1 : .55,
       child: Column(mainAxisSize: MainAxisSize.min, children: [

@@ -157,6 +157,15 @@ class AppState extends ChangeNotifier {
   Future<void> _startGps() => _tracker.start((p) => _onPosition(LatLng(p.latitude, p.longitude), heading: p.heading, speed: p.speed, accuracy: p.accuracy));
 
   void _onPosition(LatLng p, {double heading = 0, double speed = 0, double accuracy = 0}) {
+    // Avoid re-rendering on micro GPS jitter when stationary (especially on web)
+    if (me != null) {
+      final movedMeters = Geo.meters(me!, p);
+      final headingDelta = (this.heading - heading).abs();
+      if (movedMeters < 3.0 && headingDelta < 12.0) {
+        return; // Skip no-op micro jitter
+      }
+    }
+
     me = p;
     if (heading > 0) this.heading = heading;
     notifyListeners();
