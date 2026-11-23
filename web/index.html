@@ -174,6 +174,30 @@
       // Fallback timeout in case event is missed
       setTimeout(dismiss, 9000);
     })();
+
+    // Background keep-alive & Screen WakeLock for Driver shifts
+    var _dcWakeLock = null;
+    async function requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator) {
+          _dcWakeLock = await navigator.wakeLock.request('screen');
+          console.log('[DC Driver] WakeLock active - screen and GPS kept alive');
+          _dcWakeLock.addEventListener('release', function() {
+            _dcWakeLock = null;
+          });
+        }
+      } catch (e) {
+        console.warn('[DC Driver] WakeLock request error:', e);
+      }
+    }
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'visible' && !_dcWakeLock) {
+        requestWakeLock();
+      }
+    });
+    // Request initial lock on first driver touch/interaction
+    window.addEventListener('click', function() { if (!_dcWakeLock) requestWakeLock(); }, { once: false });
+    window.addEventListener('touchstart', function() { if (!_dcWakeLock) requestWakeLock(); }, { once: false });
   </script>
 
   <script src="flutter_bootstrap.js" async></script>

@@ -132,21 +132,26 @@ class AppState extends ChangeNotifier {
       notifyListeners();
       if (!gpsOff && online) await _startGps(); // pick up again by itself
     }, onError: (_) {});
-      // the phone only reports after moving 15 m; resend the last point every minute so
-      // dispatch keeps seeing a driver waiting at the hub as online
+      // Continuous heartbeat: resend location or keep-alive ping every 15s so
+      // dispatch and customer track page keep seeing the driver as actively online even if tab is minimized
       _heartbeat?.cancel();
-      _heartbeat = Timer.periodic(const Duration(seconds: 60), (_) {
+      _heartbeat = Timer.periodic(const Duration(seconds: 15), (_) {
+        if (!online) return;
         final p = me;
-        if (!online || p == null || gpsOff || DateTime.now().difference(_lastPush) < const Duration(seconds: 55)) return;
-        _lastPush = DateTime.now();
-        repo?.pushLocation(p, heading: heading, active: active).then((_) {
-          lastSent = DateTime.now();
-          sendFailing = false;
-          notifyListeners();
-        }).catchError((_) {
-          sendFailing = true;
-          notifyListeners();
-        });
+        if (p != null && !gpsOff) {
+          _lastPush = DateTime.now();
+          repo?.pushLocation(p, heading: heading, active: active).then((_) {
+            lastSent = DateTime.now();
+            sendFailing = false;
+            notifyListeners();
+          }).catchError((_) {
+            sendFailing = true;
+            notifyListeners();
+          });
+        } else {
+          // Keep-alive ping even if stationary
+          repo?.setOnline(true).catchError((_) {});
+        }
       });
     online = true;
     notifyListeners();

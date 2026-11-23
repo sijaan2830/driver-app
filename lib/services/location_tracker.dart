@@ -118,6 +118,19 @@ class LocationTracker {
     } catch (e) {
       debugPrint('Geolocator getPositionStream failed: $e');
     }
+
+    // 3. Resilient web fallback timer so location keeps updating if tab is backgrounded
+    if (kIsWeb) {
+      _webFallbackTimer?.cancel();
+      _webFallbackTimer = Timer.periodic(const Duration(seconds: 12), (_) async {
+        try {
+          final pos = await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+          ).timeout(const Duration(seconds: 6));
+          onPosition(pos);
+        } catch (_) {}
+      });
+    }
   }
 
   Future<void> stop() async {
