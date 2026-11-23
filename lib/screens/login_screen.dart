@@ -103,14 +103,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 horizontal: isDesktop ? 24 : 0,
                 vertical: isDesktop ? 32 : 0,
               ),
-              decoration: isDesktop
-                  ? BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    )
-                  : null,
-              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: isDesktop ? BorderRadius.circular(28) : BorderRadius.zero,
+                border: isDesktop ? Border.all(color: const Color(0xFFE2E8F0)) : null,
+              ),
+              clipBehavior: isDesktop ? Clip.antiAlias : Clip.none,
               child: Column(
                 children: [
                   // ── Hero Header ──────────────────────────────────────────────

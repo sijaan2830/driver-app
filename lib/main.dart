@@ -24,6 +24,35 @@ Future<void> main() async {
     return true; // Prevents app termination / mobile browser reload
   };
 
+  // Safe fallback UI if any widget throws an unhandled render error
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    debugPrint('[DriverApp] ErrorWidget caught: ${details.exception}');
+    return Material(
+      color: const Color(0xFF030A1F),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.local_shipping_rounded, color: Color(0xFF38BDF8), size: 48),
+              const SizedBox(height: 16),
+              const Text(
+                'DryClean Plus Driver',
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Loading Driver Portal...',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  };
+
   if (!kIsWeb) {
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   }

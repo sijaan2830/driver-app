@@ -58,9 +58,15 @@ class _SplashScreenState extends State<SplashScreen> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              const Spacer(flex: 2),
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Column(
+                    children: [
+                      const Spacer(flex: 2),
 
               // Dual Logo: Official App Icon + Hanger Logo Badge
               Row(
@@ -200,7 +206,11 @@ class _SplashScreenState extends State<SplashScreen> {
           ),
         ),
       ),
-    );
+    ),
+  ),
+),
+),
+);
   }
 }
 

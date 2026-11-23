@@ -102,71 +102,111 @@ class _DriverCityPainter extends CustomPainter {
   // Cached TextPainters to eliminate per-frame layout overhead & memory thrashing
   static TextPainter? _cachedVanBrand;
   static TextPainter get _vanBrandTp {
-    return _cachedVanBrand ??= TextPainter(
-      text: TextSpan(
-        style: GoogleFonts.satisfy(
-          fontSize: 16.0,
-          fontWeight: FontWeight.w700,
-          fontStyle: FontStyle.italic,
+    try {
+      return _cachedVanBrand ??= TextPainter(
+        text: TextSpan(
+          style: GoogleFonts.satisfy(
+            fontSize: 16.0,
+            fontWeight: FontWeight.w700,
+            fontStyle: FontStyle.italic,
+          ),
+          children: const [
+            TextSpan(text: 'Dryclean', style: TextStyle(color: Color(0xFF0B2545))),
+            TextSpan(text: 'Plus', style: TextStyle(color: Color(0xFFE5262D))),
+            TextSpan(text: '+', style: TextStyle(color: Color(0xFFE5262D), fontSize: 13)),
+          ],
         ),
-        children: const [
-          TextSpan(text: 'Dryclean', style: TextStyle(color: Color(0xFF0B2545))),
-          TextSpan(text: 'Plus', style: TextStyle(color: Color(0xFFE5262D))),
-          TextSpan(text: '+', style: TextStyle(color: Color(0xFFE5262D), fontSize: 13)),
-        ],
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
+        textDirection: TextDirection.ltr,
+      )..layout();
+    } catch (_) {
+      return TextPainter(
+        text: const TextSpan(
+          text: 'DrycleanPlus+',
+          style: TextStyle(fontSize: 15.0, fontWeight: FontWeight.bold, color: Color(0xFF0B2545)),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+    }
   }
 
   static TextPainter? _cachedSub;
   static TextPainter get _subTp {
-    return _cachedSub ??= TextPainter(
-      text: const TextSpan(
-        text: 'Premium care · Delivered to you',
-        style: TextStyle(
-          fontSize: 5.2,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.05,
-          color: Color(0xFF1550E8),
+    try {
+      return _cachedSub ??= TextPainter(
+        text: const TextSpan(
+          text: 'Premium care · Delivered to you',
+          style: TextStyle(
+            fontSize: 5.2,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.05,
+            color: Color(0xFF1550E8),
+          ),
         ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: 80);
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: 80);
+    } catch (_) {
+      return TextPainter(
+        text: const TextSpan(
+          text: 'Premium care',
+          style: TextStyle(fontSize: 5.2, color: Color(0xFF1550E8)),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+    }
   }
 
   static TextPainter? _cachedBadge;
   static TextPainter get _badgeTp {
-    return _cachedBadge ??= TextPainter(
-      text: TextSpan(
-        style: GoogleFonts.inter(
-          fontSize: 7.7,
-          fontWeight: FontWeight.w900,
-          letterSpacing: -0.3,
+    try {
+      return _cachedBadge ??= TextPainter(
+        text: TextSpan(
+          style: GoogleFonts.inter(
+            fontSize: 7.7,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.3,
+          ),
+          children: const [
+            TextSpan(text: 'DC', style: TextStyle(color: Colors.white)),
+            TextSpan(text: '+', style: TextStyle(color: Color(0xFFE5262D))),
+          ],
         ),
-        children: const [
-          TextSpan(text: 'DC', style: TextStyle(color: Colors.white)),
-          TextSpan(text: '+', style: TextStyle(color: Color(0xFFE5262D))),
-        ],
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
+        textDirection: TextDirection.ltr,
+      )..layout();
+    } catch (_) {
+      return TextPainter(
+        text: const TextSpan(
+          text: 'DC+',
+          style: TextStyle(fontSize: 7.7, fontWeight: FontWeight.w900, color: Colors.white),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+    }
   }
 
   static TextPainter? _cachedFlag;
   static TextPainter get _flagTp {
-    return _cachedFlag ??= TextPainter(
-      text: const TextSpan(
-        text: 'DC+',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 8.5,
-          fontWeight: FontWeight.w900,
-          letterSpacing: -0.2,
+    try {
+      return _cachedFlag ??= TextPainter(
+        text: const TextSpan(
+          text: 'DC+',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 8.5,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.2,
+          ),
         ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
+        textDirection: TextDirection.ltr,
+      )..layout();
+    } catch (_) {
+      return TextPainter(
+        text: const TextSpan(
+          text: 'DC+',
+          style: TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.bold),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+    }
   }
 
   _DriverCityPainter({
@@ -181,39 +221,44 @@ class _DriverCityPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
+    try {
+      final w = size.width;
+      final h = size.height;
+      if (w <= 0 || h <= 0) return;
 
-    // Design canvas coordinate system: 400 x 200 base
-    final scale = h / 200.0;
-    canvas.save();
-    canvas.scale(scale, scale);
-    final virtualW = w / scale;
+      // Design canvas coordinate system: 400 x 200 base
+      final scale = h / 200.0;
+      canvas.save();
+      canvas.scale(scale, scale);
+      final virtualW = w / scale;
 
-    // 1. Twilight sky gradient (only when not transparent)
-    if (!transparentBg) {
-      final skyPaint = Paint()
-        ..shader = const LinearGradient(
-          colors: [Color(0xFF040E2C), Color(0xFF092265), Color(0xFF0D328F)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ).createShader(Rect.fromLTWH(0, 0, virtualW, 200));
-      canvas.drawRect(Rect.fromLTWH(0, 0, virtualW, 200), skyPaint);
+      // 1. Twilight sky gradient (only when not transparent)
+      if (!transparentBg) {
+        final skyPaint = Paint()
+          ..shader = const LinearGradient(
+            colors: [Color(0xFF040E2C), Color(0xFF092265), Color(0xFF0D328F)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ).createShader(Rect.fromLTWH(0, 0, virtualW, 200));
+        canvas.drawRect(Rect.fromLTWH(0, 0, virtualW, 200), skyPaint);
+      }
+
+      // 2. Stars
+      _drawStars(canvas, virtualW);
+
+      // 3. Far London Skyline (Big Ben, London Eye, Skyscrapers)
+      _drawFarSkyline(canvas, virtualW);
+
+      // 4. Asphalt Road, Curb & Lane Markings
+      _drawRoad(canvas, virtualW);
+
+      // 5. The iconic DC+ Delivery Van with Headlights, Flag & Brand
+      _drawIconicVan(canvas, virtualW);
+
+      canvas.restore();
+    } catch (e) {
+      debugPrint('[DriverCityScene] paint error: $e');
     }
-
-    // 2. Stars
-    _drawStars(canvas, virtualW);
-
-    // 3. Far London Skyline (Big Ben, London Eye, Skyscrapers)
-    _drawFarSkyline(canvas, virtualW);
-
-    // 4. Asphalt Road, Curb & Lane Markings
-    _drawRoad(canvas, virtualW);
-
-    // 5. The iconic DC+ Delivery Van with Headlights, Flag & Brand
-    _drawIconicVan(canvas, virtualW);
-
-    canvas.restore();
   }
 
   void _drawStars(Canvas canvas, double virtualW) {
