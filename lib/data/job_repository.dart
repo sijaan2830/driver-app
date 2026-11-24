@@ -171,6 +171,23 @@ class FirestoreJobRepository implements JobRepository {
     });
   }
 
+  void _notifyCustomer(WriteBatch b, Job j, String status, String title, String body, {String theme = 'blue', String icon = 'local_shipping'}) {
+    if (j.customerUid.isEmpty || j.customerUid == 'website_guest' || j.customerUid == 'dummy') return;
+    final ref = _db.collection('users').doc(j.customerUid).collection('notifications').doc();
+    b.set(ref, {
+      'title': title,
+      'body': body,
+      'category': 'orders',
+      'theme': theme,
+      'icon': icon,
+      'orderId': j.orderDocId,
+      'displayOrderId': j.orderId,
+      'status': status,
+      'read': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   @override
   Future<void> setOnline(bool online) async {
     final b = _db.batch();
@@ -199,6 +216,15 @@ class FirestoreJobRepository implements JobRepository {
       'updatedAt': FieldValue.serverTimestamp(),
     });
     _history(b, j, status);
+    _notifyCustomer(
+      b,
+      j,
+      status,
+      j.isPickup ? '${driver.firstName} is on the way' : '${driver.firstName} is bringing your order',
+      'Tap to follow your driver live on the map.',
+      theme: 'blue',
+      icon: 'local_shipping',
+    );
 
     final trackingData = {
       'orderId': j.orderId,
@@ -240,6 +266,15 @@ class FirestoreJobRepository implements JobRepository {
       'updatedAt': FieldValue.serverTimestamp(),
     });
     _history(b, j, status);
+    _notifyCustomer(
+      b,
+      j,
+      status,
+      'Your driver is outside',
+      j.isPickup ? 'Please hand over your bags at the door.' : 'Your clean clothes are at your door.',
+      theme: 'mint',
+      icon: 'where_to_vote',
+    );
 
     final trackingUpdate = {
       'state': 'arrived',
@@ -284,6 +319,17 @@ class FirestoreJobRepository implements JobRepository {
       if (!j.isPickup) ...{'deliveredAt': FieldValue.serverTimestamp(), if (p.payment != null) 'paymentStatus': p.payment == 'prepaid' ? 'paid' : 'paid_on_delivery', if (p.payment != null) 'paymentCollectedBy': p.payment},
     });
     _history(b, j, status, j.isPickup ? '${p.bags} bag${p.bags == 1 ? '' : 's'} collected' : 'Delivered');
+    _notifyCustomer(
+      b,
+      j,
+      status,
+      j.isPickup ? 'Bags collected' : 'Delivered — thank you!',
+      j.isPickup
+          ? '${p.bags > 0 ? '${p.bags} bag${p.bags == 1 ? '' : 's'}' : 'Your order'} on the way to our facility.'
+          : '#${j.orderId} has been delivered. We hope you love the results.',
+      theme: 'mint',
+      icon: j.isPickup ? 'inventory' : 'check_circle',
+    );
     for (final t in p.bagTags) {
       b.set(_db.collection('bags').doc(t), {
         'orderId': j.orderId,
@@ -314,6 +360,15 @@ class FirestoreJobRepository implements JobRepository {
     });
     b.update(_order(j), {'status': status, 'updatedAt': FieldValue.serverTimestamp()});
     _history(b, j, status, reason);
+    _notifyCustomer(
+      b,
+      j,
+      status,
+      j.isPickup ? 'We missed you' : 'Delivery missed',
+      j.isPickup ? 'We couldn\'t collect #${j.orderId} today. Tap to reschedule.' : 'We couldn\'t deliver #${j.orderId} today. Tap to choose a new time.',
+      theme: 'amber',
+      icon: 'event_busy',
+    );
     if (j.orderId.isNotEmpty) {
       b.delete(_db.collection('live_tracking').doc(j.orderId));
     }
