@@ -198,6 +198,50 @@
     // Request initial lock on first driver touch/interaction
     window.addEventListener('click', function() { if (!_dcWakeLock) requestWakeLock(); }, { once: false });
     window.addEventListener('touchstart', function() { if (!_dcWakeLock) requestWakeLock(); }, { once: false });
+
+    // Web browser notifications + Web Audio chime for new driver jobs
+    window.__dcDriverRequestNotify = async function() {
+      try {
+        if ('Notification' in window && Notification.permission === 'default') {
+          await Notification.requestPermission();
+        }
+      } catch (_) {}
+    };
+
+    window.__dcDriverNotify = async function(title, body) {
+      try {
+        var Ctx = window.AudioContext || window.webkitAudioContext;
+        if (Ctx) {
+          var ctx = new Ctx();
+          [880, 1174.66].forEach(function(freq, idx) {
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.001, ctx.currentTime + idx * 0.14);
+            gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + idx * 0.14 + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.14 + 0.28);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(ctx.currentTime + idx * 0.14);
+            osc.stop(ctx.currentTime + idx * 0.14 + 0.3);
+          });
+        }
+      } catch (_) {}
+
+      try {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          if ('serviceWorker' in navigator) {
+            var reg = await navigator.serviceWorker.getRegistration();
+            if (reg && reg.showNotification) {
+              await reg.showNotification(title, { body: body, icon: 'icons/Icon-192.png' });
+              return;
+            }
+          }
+          new Notification(title, { body: body, icon: 'icons/Icon-192.png' });
+        }
+      } catch (_) {}
+    };
   </script>
 
   <script src="flutter_bootstrap.js" async></script>

@@ -9,6 +9,7 @@ import '../data/geo.dart';
 import '../data/job_repository.dart';
 import '../models.dart';
 import '../services/driver_push.dart';
+import '../services/driver_web_notify.dart';
 import '../services/location_tracker.dart';
 import 'package:geolocator/geolocator.dart' show ServiceStatus;
 
@@ -33,6 +34,8 @@ class AppState extends ChangeNotifier {
   StreamSubscription<ServiceStatus>? _gpsSub;
   DateTime _lastPush = DateTime(2000);
   int _nearHits = 0;
+  final Set<String> _knownJobIds = <String>{};
+  bool _initialJobsLoaded = false;
   bool _arriving = false;
 
   bool get signedIn => repo != null;
@@ -83,8 +86,33 @@ class AppState extends ChangeNotifier {
 
   Future<void> _attach(JobRepository r) async {
     await _jobsSub?.cancel();
+    _knownJobIds.clear();
+    _initialJobsLoaded = false;
     repo = r;
     _jobsSub = r.watchJobs().listen((list) {
+      if (!_initialJobsLoaded) {
+        _knownJobIds.addAll(list.map((j) => j.id));
+        _initialJobsLoaded = true;
+      } else {
+        final newJobs = list.where((j) => !_knownJobIds.contains(j.id) && !j.isDone).toList();
+        _knownJobIds.addAll(list.map((j) => j.id));
+        if (newJobs.isNotEmpty) {
+          final first = newJobs.first;
+          final kind = first.isPickup ? 'Pickup' : 'Delivery';
+          final place = first.postcode.isNotEmpty ? first.postcode : first.address;
+          final title = newJobs.length == 1
+              ? 'New $kind Job: ${first.orderId}'
+              : '${newJobs.length} New Jobs Assigned';
+          final body = newJobs.length == 1
+              ? '${first.customerName.isNotEmpty ? first.customerName : 'Customer'}${place.isNotEmpty ? ' ($place)' : ''}'
+              : 'Tap to review your updated route';
+          notice = '$title — $body';
+          HapticFeedback.mediumImpact();
+          if (kIsWeb) {
+            showDriverWebJobAlert(title, body);
+          }
+        }
+      }
       jobs = list;
       notifyListeners();
     });
@@ -102,6 +130,8 @@ class AppState extends ChangeNotifier {
     await repo?.dispose();
     repo = null;
     jobs = const [];
+    _knownJobIds.clear();
+    _initialJobsLoaded = false;
     me = null;
     if (firebaseReady && FirebaseAuth.instance.currentUser != null) await FirebaseAuth.instance.signOut();
     notifyListeners();

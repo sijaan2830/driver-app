@@ -7,38 +7,58 @@ import 'package:flutter/foundation.dart';
 // rather than the newer installation-ID API.
 // ignore_for_file: deprecated_member_use
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'driver_web_notify.dart';
 
 /// "New job" pushes from dispatch. The server (Cloud Function `onJobCreated`)
-/// sends to `drivers/{uid}.fcmToken`, which this keeps up to date.
+/// sends to `drivers/{uid}.fcmToken`, which this keeps up to date on both
+/// mobile apps and supported web browsers (via Firebase VAPID key).
 class DriverPush {
+  static const String _webVapidKey =
+      'BM7t8Ck2AW9D9G4ysypu4zx3kLdnBCgEHGT7yZxtBGo0mfqpjcHwYJbtNYcYTtDbw0MI-9XWooyDiyKtteFLs1I';
+
   static StreamSubscription<String>? _refresh;
   static StreamSubscription<RemoteMessage>? _foreground;
 
   /// Call after the driver signs in. [onMessage] shows foreground messages in the app.
   static Future<void> register(String uid, void Function(String title, String body) onMessage) async {
-    if (kIsWeb) {
-      // On web, real-time Firestore listeners (watchJobs) already stream all jobs instantaneously.
-      // FCM web push requires a service worker and VAPID key which crash on unsupported mobile browsers.
-      return;
-    }
     final fcm = FirebaseMessaging.instance;
     try {
-      await fcm.requestPermission(alert: true, badge: true, sound: true);
-      final ref = FirebaseFirestore.instance.collection('drivers').doc(uid);
-      Future<void> save(String? t) async {
-        if (t != null) await ref.set({'fcmToken': t, 'fcmUpdatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+      if (kIsWeb) {
+        await requestDriverWebNotificationPermission();
+      } else {
+        await fcm.requestPermission(alert: true, badge: true, sound: true);
       }
 
-      await save(await fcm.getToken());
+      final ref = FirebaseFirestore.instance.collection('drivers').doc(uid);
+      Future<void> save(String? t) async {
+        if (t != null && t.isNotEmpty) {
+          await ref.set({
+            'fcmToken': t,
+            'fcmPlatform': kIsWeb ? 'web' : 'mobile',
+            'fcmUpdatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+        }
+      }
+
+      final token = kIsWeb
+          ? await fcm.getToken(vapidKey: _webVapidKey)
+          : await fcm.getToken();
+      await save(token);
+
       await _refresh?.cancel();
       _refresh = fcm.onTokenRefresh.listen(save);
       await _foreground?.cancel();
       _foreground = FirebaseMessaging.onMessage.listen((m) {
         final n = m.notification;
-        if (n != null) onMessage(n.title ?? 'New job', n.body ?? '');
+        if (n != null) {
+          final title = n.title ?? 'New job';
+          final body = n.body ?? '';
+          onMessage(title, body);
+          if (kIsWeb) showDriverWebJobAlert(title, body);
+        }
       });
     } catch (_) {
-      // Push is a convenience — the job list is live anyway.
+      // Push is a convenience — watchJobs() still streams all jobs & browser alerts live.
     }
   }
 
