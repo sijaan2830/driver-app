@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models.dart';
+import '../services/push_service.dart';
 import 'geo.dart';
 
 /// Proof captured at the door.
@@ -186,6 +187,14 @@ class FirestoreJobRepository implements JobRepository {
       'read': false,
       'createdAt': FieldValue.serverTimestamp(),
     });
+    // Fire-and-forget FCM push so the customer gets an OS notification
+    // even when the app is completely closed / killed.
+    PushService.send(
+      userId: j.customerUid,
+      title: title,
+      body: body,
+      data: {'type': 'order', 'orderId': j.orderDocId},
+    );
   }
 
   @override
