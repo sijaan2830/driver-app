@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../data/geo.dart';
 import '../models.dart';
-import '../services/location_tracker.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/route_map.dart';
@@ -46,8 +45,6 @@ class HomeScreen extends StatelessWidget {
                     Text(s.driver?.firstName ?? 'Driver', style: DC.h(22, color: Colors.white)),
                   ]),
                 ),
-                _OnlineSwitch(online: s.online),
-                const SizedBox(width: 10),
                 InkWell(
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
                   customBorder: const CircleBorder(),
@@ -111,30 +108,7 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _OnlineSwitch extends StatelessWidget {
-  const _OnlineSwitch({required this.online});
-  final bool online;
-  @override
-  Widget build(BuildContext context) => InkWell(
-        borderRadius: BorderRadius.circular(99),
-        onTap: () async {
-          final err = await context.read<AppState>().setOnline(!online);
-          if (err != null && context.mounted) toast(context, err);
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          padding: const EdgeInsets.fromLTRB(10, 7, 12, 7),
-          decoration: BoxDecoration(color: online ? DC.emerald : Colors.white.withValues(alpha: .15), borderRadius: BorderRadius.circular(99), border: Border.all(color: Colors.white24)),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Container(width: 9, height: 9, decoration: BoxDecoration(color: online ? Colors.white : Colors.white54, shape: BoxShape.circle)),
-            const SizedBox(width: 7),
-            Text(online ? 'Online' : 'Offline', style: DC.t(13, color: Colors.white, w: FontWeight.w800)),
-          ]),
-        ),
-      );
-}
-
-/// Tells the driver whether customers and dispatch can see them right now.
+/// Tells the driver their live GPS status (always online while signed in).
 class _LiveLine extends StatelessWidget {
   const _LiveLine({required this.online, required this.hasFix, required this.lastSent, required this.failing, this.gpsOff = false});
   final bool online, hasFix, failing, gpsOff;
@@ -142,21 +116,27 @@ class _LiveLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (IconData icon, String text, Color dot) = !online
-        ? (Icons.location_off_rounded, 'Offline — customers can’t see you', Colors.white54)
-        : gpsOff
-            ? (Icons.location_disabled_rounded, 'GPS is off — tap here to turn it on', const Color(0xFFFCA5A5))
-            : failing
-            ? (Icons.cloud_off_rounded, 'No connection — your location will send when you’re back online', const Color(0xFFFCA5A5))
+    final (IconData icon, String text, Color dot) = gpsOff
+        ? (Icons.location_disabled_rounded, 'Tap here to allow location', const Color(0xFFFCA5A5))
+        : failing
+            ? (Icons.cloud_off_rounded, 'Reconnecting GPS…', const Color(0xFFFCA5A5))
             : !hasFix
-                ? (Icons.gps_not_fixed_rounded, 'Finding GPS…', DC.gold)
-                : (Icons.my_location_rounded, lastSent == null ? 'Sharing live location' : 'Sharing live location · sent ${TimeOfDay.fromDateTime(lastSent!).format(context)}', const Color(0xFF4ADE80));
+                ? (Icons.gps_not_fixed_rounded, 'Connecting GPS…', DC.gold)
+                : (Icons.my_location_rounded, lastSent == null ? 'Live GPS active' : 'Live GPS active · ${TimeOfDay.fromDateTime(lastSent!).format(context)}', const Color(0xFF4ADE80));
     final row = Row(children: [
       Icon(icon, size: 16, color: dot),
       const SizedBox(width: 7),
       Expanded(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: DC.t(12.5, color: Colors.white, w: FontWeight.w700))),
     ]);
-    return gpsOff && online ? InkWell(onTap: () => LocationTracker.openFix(LocationTracker.msgGpsOff), child: row) : row;
+    return gpsOff || !online
+        ? InkWell(
+            onTap: () async {
+              final err = await context.read<AppState>().setOnline(true);
+              if (err != null && context.mounted) toast(context, err);
+            },
+            child: row,
+          )
+        : row;
   }
 }
 

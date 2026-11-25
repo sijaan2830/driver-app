@@ -195,9 +195,15 @@
         requestWakeLock();
       }
     });
-    // Request initial lock on first driver touch/interaction
-    window.addEventListener('click', function() { if (!_dcWakeLock) requestWakeLock(); }, { once: false });
-    window.addEventListener('touchstart', function() { if (!_dcWakeLock) requestWakeLock(); }, { once: false });
+    // Request wake lock + notification permission on first driver tap (required by Chrome/iOS Safari)
+    window.addEventListener('click', function() {
+      if (!_dcWakeLock) requestWakeLock();
+      if (window.__dcDriverRequestNotify) window.__dcDriverRequestNotify();
+    }, { once: false });
+    window.addEventListener('touchstart', function() {
+      if (!_dcWakeLock) requestWakeLock();
+      if (window.__dcDriverRequestNotify) window.__dcDriverRequestNotify();
+    }, { once: false });
 
     // Web browser notifications + Web Audio chime for new driver jobs
     window.__dcDriverRequestNotify = async function() {

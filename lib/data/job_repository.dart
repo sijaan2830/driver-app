@@ -302,16 +302,24 @@ class FirestoreJobRepository implements JobRepository {
 
   Future<String?> _upload(String path, Uint8List? bytes, String type) async {
     if (bytes == null) return null;
-    final ref = _storage.ref(path);
-    await ref.putData(bytes, SettableMetadata(contentType: type));
-    return ref.getDownloadURL();
+    try {
+      final ref = _storage.ref(path);
+      await ref.putData(bytes, SettableMetadata(contentType: type)).timeout(const Duration(seconds: 8));
+      return await ref.getDownloadURL().timeout(const Duration(seconds: 5));
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
   Future<void> complete(Job j, Proof p) async {
     final base = 'pod/${j.orderId}/${j.id}';
-    final photoUrl = await _upload('$base-photo.jpg', p.photo, 'image/jpeg');
-    final signatureUrl = await _upload('$base-signature.png', p.signature, 'image/png');
+    final urls = await Future.wait([
+      _upload('$base-photo.jpg', p.photo, 'image/jpeg'),
+      _upload('$base-signature.png', p.signature, 'image/png'),
+    ]);
+    final photoUrl = urls[0];
+    final signatureUrl = urls[1];
     final status = j.isPickup ? OrderStatus.collected : OrderStatus.delivered;
     final b = _db.batch();
     b.update(_db.collection('jobs').doc(j.id), {

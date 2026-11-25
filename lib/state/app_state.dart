@@ -120,6 +120,8 @@ class AppState extends ChangeNotifier {
       notice = body.isEmpty ? title : '$title — $body';
       notifyListeners();
     });
+    // Always stay online on shift and start GPS automatically once location is allowed.
+    unawaited(setOnline(true));
     notifyListeners();
   }
 

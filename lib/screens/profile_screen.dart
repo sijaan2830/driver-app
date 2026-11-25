@@ -39,18 +39,13 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(width: 10),
           _Num('$failed', 'Not done', DC.red),
         ]),
-        const SectionTitle('Status'),
+        const SectionTitle('Shift'),
         AppCard(
-          child: SwitchListTile(
+          child: ListTile(
             contentPadding: EdgeInsets.zero,
-            value: s.online,
-            activeTrackColor: DC.emerald,
-            title: Text(s.online ? 'Online — sharing location' : 'Offline', style: DC.t(15, w: FontWeight.w800)),
-            subtitle: Text('Customers only see you while you are on the way to them.', style: DC.t(12.5, color: DC.mut)),
-            onChanged: (v) async {
-              final err = await context.read<AppState>().setOnline(v);
-              if (err != null && context.mounted) toast(context, err);
-            },
+            leading: const CircleAvatar(backgroundColor: DC.mint, child: Icon(Icons.my_location_rounded, color: DC.emerald)),
+            title: Text('Active on shift', style: DC.t(15, w: FontWeight.w800)),
+            subtitle: Text('Location shares automatically while you are on a trip.', style: DC.t(12.5, color: DC.mut)),
           ),
         ),
         const SizedBox(height: 26),
