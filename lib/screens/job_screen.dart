@@ -27,14 +27,24 @@ class JobScreen extends StatelessWidget {
       body: CustomScrollView(slivers: [
         SliverAppBar(
           pinned: true,
-          expandedHeight: 250,
+          expandedHeight: job.hasGeo ? 250 : 110,
           backgroundColor: DC.forest,
           foregroundColor: Colors.white,
           title: Text('#${job.orderId}', style: DC.h(18, color: Colors.white)),
           flexibleSpace: FlexibleSpaceBar(
             background: job.hasGeo
                 ? RouteMap(me: s.me, heading: s.heading, stops: [job], focus: job, line: s.me != null, interactive: false)
-                : Container(decoration: const BoxDecoration(gradient: DC.heroGradient)),
+                : Container(
+                    decoration: const BoxDecoration(gradient: DC.heroGradient),
+                    alignment: Alignment.bottomLeft,
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                    child: Text(
+                      job.postcode.isEmpty
+                          ? 'No UK postcode on this order — tap Navigate for Maps'
+                          : 'Postcode ${job.postcode} — tap Navigate for directions',
+                      style: DC.t(12.5, color: Colors.white70, w: FontWeight.w600),
+                    ),
+                  ),
           ),
         ),
         SliverPadding(
@@ -42,13 +52,28 @@ class JobScreen extends StatelessWidget {
           sliver: SliverList.list(children: [
             Row(children: [TypeBadge(job), const SizedBox(width: 8), StatusPill(job), const Spacer(), if (d != null) Text('${Geo.km(d)} away', style: DC.t(13, color: DC.mut, w: FontWeight.w700))]),
             const SizedBox(height: 12),
-            Text(job.customerName, style: DC.h(26)),
+            Text(job.customerName.isEmpty ? 'Customer' : job.customerName, style: DC.h(26)),
             const SizedBox(height: 14),
             AppCard(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
               child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-                RoundAction(icon: Icons.call_rounded, label: 'Call', onTap: () => callCustomer(job)),
-                RoundAction(icon: Icons.sms_rounded, label: 'Text', color: DC.blue, onTap: () => textCustomer(job, 'Hi ${job.firstName}, this is your DryClean Plus driver. ')),
+                RoundAction(
+                  icon: Icons.call_rounded,
+                  label: 'Call',
+                  onTap: () async {
+                    final ok = await callCustomer(job);
+                    if (!ok && context.mounted) toast(context, 'No customer phone number on this order');
+                  },
+                ),
+                RoundAction(
+                  icon: Icons.sms_rounded,
+                  label: 'Text',
+                  color: DC.blue,
+                  onTap: () async {
+                    final ok = await textCustomer(job, 'Hi ${job.firstName}, this is your DryClean Plus driver. ');
+                    if (!ok && context.mounted) toast(context, 'No customer phone number on this order');
+                  },
+                ),
                 RoundAction(icon: Icons.navigation_rounded, label: 'Navigate', color: DC.emerald, onTap: () => navigateTo(job)),
               ]),
             ),
@@ -56,7 +81,8 @@ class JobScreen extends StatelessWidget {
             AppCard(
               child: Column(children: [
                 InfoRow(icon: Icons.place_outlined, label: 'Address', value: job.fullAddress),
-                InfoRow(icon: Icons.schedule_rounded, label: job.isPickup ? 'Collection slot' : 'Delivery slot', value: job.slot.isEmpty ? 'Any time today' : job.slot),
+                if (job.phone.isNotEmpty) InfoRow(icon: Icons.phone_outlined, label: 'Customer phone', value: job.phone),
+                InfoRow(icon: Icons.schedule_rounded, label: job.isPickup ? 'Collection slot' : 'Delivery slot', value: job.slot.isEmpty ? 'Any time today' : '${job.date.isNotEmpty ? '${job.date} · ' : ''}${job.slot}'),
                 if (job.handoff.isNotEmpty) InfoRow(icon: Icons.handshake_outlined, label: 'Handover', value: job.handoff),
                 if (job.notes.isNotEmpty) InfoRow(icon: Icons.sticky_note_2_outlined, label: 'Notes from customer', value: job.notes),
               ]),

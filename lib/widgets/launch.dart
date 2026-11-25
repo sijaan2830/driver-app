@@ -2,9 +2,17 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models.dart';
 
-Future<void> callCustomer(Job j) => launchUrl(Uri(scheme: 'tel', path: j.phone.replaceAll(' ', '')));
+Future<bool> callCustomer(Job j) {
+  final phone = j.phone.replaceAll(RegExp(r'\s+'), '');
+  if (phone.isEmpty) return Future.value(false);
+  return launchUrl(Uri(scheme: 'tel', path: phone), mode: LaunchMode.externalApplication);
+}
 
-Future<void> textCustomer(Job j, String body) => launchUrl(Uri(scheme: 'sms', path: j.phone.replaceAll(' ', ''), queryParameters: {'body': body}));
+Future<bool> textCustomer(Job j, String body) {
+  final phone = j.phone.replaceAll(RegExp(r'\s+'), '');
+  if (phone.isEmpty) return Future.value(false);
+  return launchUrl(Uri(scheme: 'sms', path: phone, queryParameters: {'body': body}), mode: LaunchMode.externalApplication);
+}
 
 /// Opens turn-by-turn navigation in Google Maps (or the phone's default maps app).
 Future<void> navigateTo(Job j) {
