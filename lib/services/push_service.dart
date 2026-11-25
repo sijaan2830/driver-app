@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
@@ -33,6 +34,39 @@ class PushService {
       ).timeout(const Duration(seconds: 15));
     } catch (e) {
       debugPrint('PushService: $e');
+    }
+  }
+
+  static dynamic _jsonSafe(dynamic v) {
+    if (v == null || v is num || v is String || v is bool) return v;
+    if (v is Timestamp) return v.toDate().toIso8601String();
+    if (v is DateTime) return v.toIso8601String();
+    if (v is GeoPoint) return {'latitude': v.latitude, 'longitude': v.longitude};
+    if (v is DocumentReference) return v.path;
+    if (v is Map) return {for (final e in v.entries) e.key.toString(): _jsonSafe(e.value)};
+    if (v is Iterable) return [for (final i in v) _jsonSafe(i)];
+    return v.toString();
+  }
+
+  static Future<void> sendDeliveredEmail(Map<String, dynamic> order) async {
+    final b = order['bookingData'] is Map ? order['bookingData'] as Map : const {};
+    final email = (b['email'] ?? order['email'] ?? '').toString().trim();
+    if (email.isEmpty || !email.contains('@')) return;
+    try {
+      await http.post(
+        Uri.parse('$_baseUrl/api/send-email'),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': _apiKey,
+        },
+        body: jsonEncode({
+          'type': 'delivered',
+          'recipientEmail': email,
+          'order': _jsonSafe(order),
+        }),
+      ).timeout(const Duration(seconds: 20));
+    } catch (e) {
+      debugPrint('PushService email: $e');
     }
   }
 }

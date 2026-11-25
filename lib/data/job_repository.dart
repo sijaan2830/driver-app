@@ -362,6 +362,15 @@ class FirestoreJobRepository implements JobRepository {
       b.delete(_db.collection('live_tracking').doc(j.orderDocId));
     }
     await b.commit();
+    if (!j.isPickup && j.orderDocId.isNotEmpty) {
+      unawaited(_order(j).get().then((snap) {
+        final data = snap.data();
+        if (data != null) {
+          final payload = Map<String, dynamic>.from(data)..['id'] = snap.id;
+          PushService.sendDeliveredEmail(payload);
+        }
+      }).catchError((_) {}));
+    }
   }
 
   @override
